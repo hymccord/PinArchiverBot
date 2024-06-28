@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PinArchiverBot": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_environment": "development"
+      }
+    }
+  }
+}
