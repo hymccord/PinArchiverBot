@@ -1,9 +1,13 @@
 ﻿using Discord.Addons.Hosting;
 using Discord.WebSocket;
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
+using PinArchiverBot.Persistence;
 
 namespace PinArchiverBot;
 
@@ -25,6 +29,11 @@ internal class Program
         builder.Services.AddOptions<DiscordBotSettings>().BindConfiguration(nameof(DiscordBotSettings));
 
         // 🛠 Services
+        builder.Services.AddDbContextFactory<PinArchiverDbContext>(o =>
+        {
+            o.UseSqlite(builder.Configuration.GetConnectionString("PinArchiverDbContext"));
+        });
+
         builder.Services.AddDiscordHost((config, services) =>
         {
             config.SocketConfig = new DiscordSocketConfig
@@ -44,11 +53,10 @@ internal class Program
             config.UseCompiledLambda = true;
         });
 
+        builder.Services.AddHostedService<DatabaseMigrationService>();
         builder.Services.AddHostedService<InteractionHandlerService>();
         builder.Services.AddHostedService<BotStatusService>();
         builder.Services.AddHostedService<MessageHandlerService>();
-        //builder.Services.AddHostedService<PinArchiverService>();
-
 
         await builder.Build().RunAsync();
     }
