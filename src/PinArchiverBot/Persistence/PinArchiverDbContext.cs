@@ -14,6 +14,8 @@ public class PinArchiverDbContext(DbContextOptions<PinArchiverDbContext> options
 
         modelBuilder.Entity<BlacklistChannel>(bc =>
         {
+            bc.HasKey(bc => new { bc.GuildId, bc.ChannelId });
+            bc.HasIndex(bc => bc.GuildId);
             bc.HasIndex(bc => bc.ChannelId).IsUnique();
         });
     }

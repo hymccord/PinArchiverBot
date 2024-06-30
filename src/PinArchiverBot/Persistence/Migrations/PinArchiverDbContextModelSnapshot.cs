@@ -33,16 +33,17 @@ namespace PinArchiverBot.Persistence.Migrations
             modelBuilder.Entity("PinArchiverBot.Persistence.Models.BlacklistChannel", b =>
                 {
                     b.Property<ulong>("GuildId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<ulong>("ChannelId")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("GuildId");
+                    b.HasKey("GuildId", "ChannelId");
 
                     b.HasIndex("ChannelId")
                         .IsUnique();
+
+                    b.HasIndex("GuildId");
 
                     b.ToTable("BlacklistChannels");
                 });

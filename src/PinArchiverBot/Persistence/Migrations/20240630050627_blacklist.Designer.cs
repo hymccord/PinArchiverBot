@@ -10,7 +10,7 @@ using PinArchiverBot.Persistence;
 namespace PinArchiverBot.Persistence.Migrations
 {
     [DbContext(typeof(PinArchiverDbContext))]
-    [Migration("20240630015506_blacklist")]
+    [Migration("20240630050627_blacklist")]
     partial class blacklist
     {
         /// <inheritdoc />
@@ -36,16 +36,17 @@ namespace PinArchiverBot.Persistence.Migrations
             modelBuilder.Entity("PinArchiverBot.Persistence.Models.BlacklistChannel", b =>
                 {
                     b.Property<ulong>("GuildId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<ulong>("ChannelId")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("GuildId");
+                    b.HasKey("GuildId", "ChannelId");
 
                     b.HasIndex("ChannelId")
                         .IsUnique();
+
+                    b.HasIndex("GuildId");
 
                     b.ToTable("BlacklistChannels");
                 });
