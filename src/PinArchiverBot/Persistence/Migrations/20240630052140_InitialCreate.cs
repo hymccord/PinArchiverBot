@@ -5,11 +5,24 @@
 namespace PinArchiverBot.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class blacklist : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "ArchiveChannels",
+                columns: table => new
+                {
+                    GuildId = table.Column<ulong>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ChannelId = table.Column<ulong>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ArchiveChannels", x => x.GuildId);
+                });
+
             migrationBuilder.CreateTable(
                 name: "BlacklistChannels",
                 columns: table => new
@@ -37,6 +50,9 @@ namespace PinArchiverBot.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ArchiveChannels");
+
             migrationBuilder.DropTable(
                 name: "BlacklistChannels");
         }

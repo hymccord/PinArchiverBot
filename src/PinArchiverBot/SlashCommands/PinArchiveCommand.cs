@@ -94,7 +94,7 @@ public class PinArchiveCommand : InteractionModuleBase
 
         var embedBuilder = new EmbedBuilder()
             .WithTitle("Settings")
-            .AddField(":file_cabinet: ", archiveChannel is null ? "Not set" : $"<#{archiveChannel.ChannelId}>");
+            .WithDescription($":file_cabinet:  {(archiveChannel is null ? "Not set" : $"<#{archiveChannel.ChannelId}>")}");
 
         if (blacklistChannels.Count != 0)
         {

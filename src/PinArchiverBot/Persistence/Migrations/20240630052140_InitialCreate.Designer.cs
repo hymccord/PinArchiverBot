@@ -10,8 +10,8 @@ using PinArchiverBot.Persistence;
 namespace PinArchiverBot.Persistence.Migrations
 {
     [DbContext(typeof(PinArchiverDbContext))]
-    [Migration("20240630050627_blacklist")]
-    partial class blacklist
+    [Migration("20240630052140_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
