@@ -6,5 +6,5 @@ internal class ArchiveChannel
     [Key]
     public ulong GuildId { get; set; }
 
-    public ulong Channel { get; set; }
+    public ulong ChannelId { get; set; }
 }
