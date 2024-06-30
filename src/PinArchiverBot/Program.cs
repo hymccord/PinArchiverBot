@@ -21,18 +21,20 @@ internal class Program
 
         if (string.IsNullOrWhiteSpace(discordToken))
         {
-            Console.WriteLine("Error: No discord token found. Please provide a token via the DiscordBotSettings:Token environment variable.");
-            //Environment.Exit(1);
+            if (!EF.IsDesignTime)
+            {
+                Console.WriteLine("Error: No discord token found. Please provide a token via the DiscordBotSettings:Token environment variable.");
+                Environment.Exit(1);
+            }
         }
 
         // ⚙ Configuration
         builder.Services.AddOptions<DiscordBotSettings>().BindConfiguration(nameof(DiscordBotSettings));
 
         // 🛠 Services
-        builder.Services.AddDbContextFactory<PinArchiverDbContext>(o =>
-        {
-            o.UseSqlite(builder.Configuration.GetConnectionString("PinArchiverDbContext"));
-        });
+        builder.Services.AddDbContextFactory<PinArchiverDbContext>(o => 
+            o.UseSqlite(builder.Configuration.GetConnectionString("PinArchiverDbContext")
+        ));
 
         builder.Services.AddDiscordHost((config, services) =>
         {

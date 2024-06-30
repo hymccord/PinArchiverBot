@@ -16,6 +16,8 @@ public interface IPinArchiverService
 {
     Task EnableArchiveChannelAsync(ulong guildId, ulong channelId);
     Task DisableArchiveChannelAsync(ulong guildId);
+    Task BlacklistChannelAsync(ulong guildId, ulong channelId);
+    Task WhitelistChannelAsync(ulong guildId, ulong channelId);
 }
 
 class PinArchiverService : IPinArchiverService
@@ -25,6 +27,8 @@ class PinArchiverService : IPinArchiverService
     private readonly DiscordSocketClient _client;
 
     private ConcurrentDictionary<ulong, ulong> _guildArchiveChannelCache = [];
+    // This is just a ConcurrentHashSet, channelIDs are unique
+    private ConcurrentDictionary<ulong, ulong> _blacklistedChannels = [];
 
     private readonly Channel<(IGuild guild, IUserMessage message)> _messageArchivalQueue = Channel.CreateUnbounded<(IGuild, IUserMessage)>(new()
     {
@@ -47,46 +51,96 @@ class PinArchiverService : IPinArchiverService
             .Select(ac => new KeyValuePair<ulong, ulong>(ac.GuildId, ac.ChannelId))
             .ToListAsync();
         _guildArchiveChannelCache = new(archiveChannels);
+        var blacklistChannels = await context.BlacklistChannels
+            .Select(ac => new KeyValuePair<ulong, ulong>(ac.ChannelId, ac.ChannelId))
+            .ToListAsync();
+        _blacklistedChannels = new(blacklistChannels);
 
         _ = Task.Run(ProcessMessagesAsync);
     }
 
     public async Task EnableArchiveChannelAsync(ulong guildId, ulong channelId)
     {
-        using var context = _contextFactory.CreateDbContext();
-
         await DisableArchiveChannelAsync(guildId);
 
-        if (_guildArchiveChannelCache.TryAdd(guildId, channelId))
+        if (!_guildArchiveChannelCache.TryAdd(guildId, channelId))
         {
-            await context.ArchiveChannels.AddAsync(new ArchiveChannel
-            {
-                GuildId = guildId,
-                ChannelId = channelId
-            });
-            await context.SaveChangesAsync().ConfigureAwait(false);
+            return;
         }
+
+        using var context = _contextFactory.CreateDbContext();
+        await context.ArchiveChannels.AddAsync(new ArchiveChannel
+        {
+            GuildId = guildId,
+            ChannelId = channelId
+        });
+        await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
     public async Task DisableArchiveChannelAsync(ulong guildId)
     {
-        using var context = _contextFactory.CreateDbContext();
-
-        if (_guildArchiveChannelCache.TryRemove(guildId, out ulong channelId))
+        if (!_guildArchiveChannelCache.TryRemove(guildId, out ulong channelId))
         {
-            ArchiveChannel? channel = await context.ArchiveChannels.FindAsync(guildId, channelId);
+            return;
+        }
 
-            if (channel is not null)
-            {
-                context.ArchiveChannels.Remove(channel);
-                await context.SaveChangesAsync().ConfigureAwait(false);
-            }
+        using var context = _contextFactory.CreateDbContext();
+        ArchiveChannel? channel = await context.ArchiveChannels.FindAsync(guildId);
+
+        if (channel is not null)
+        {
+            context.ArchiveChannels.Remove(channel);
+            await context.SaveChangesAsync().ConfigureAwait(false);
+        }
+    }
+
+    public async Task BlacklistChannelAsync(ulong guildId, ulong channelId)
+    {
+        if (_blacklistedChannels.ContainsKey(channelId))
+        {
+            return;
+        }
+
+        _logger.LogDebug("Blacklisting channel {ChannelId}", channelId);
+
+        _blacklistedChannels.TryAdd(channelId, channelId);
+        var context = _contextFactory.CreateDbContext();
+        await context.BlacklistChannels.AddAsync(new BlacklistChannel
+        {
+            GuildId = guildId,
+            ChannelId = channelId
+        });
+        await context.SaveChangesAsync().ConfigureAwait(false);
+    }
+
+    public async Task WhitelistChannelAsync(ulong guildId, ulong channelId)
+    {
+        if (!_blacklistedChannels.ContainsKey(channelId))
+        {
+            return;
+        }
+
+        _logger.LogDebug("Whitelisting channel {ChannelId}", channelId);
+
+        _blacklistedChannels.TryRemove(channelId, out _);
+        var context = _contextFactory.CreateDbContext();
+        BlacklistChannel? channel = await context.BlacklistChannels
+            .Where(bc => bc.ChannelId == channelId)
+            .SingleOrDefaultAsync();
+        if (channel is not null) {
+            context.BlacklistChannels.Remove(channel);
+            await context.SaveChangesAsync().ConfigureAwait(false);
         }
     }
 
     public async Task OnMessageEditedAsync(IGuild guild, IUserMessage message)
     {
         if (!message.IsPinned)
+        {
+            return;
+        }
+
+        if (_blacklistedChannels.ContainsKey(message.Channel.Id))
         {
             return;
         }
@@ -98,7 +152,6 @@ class PinArchiverService : IPinArchiverService
     {
         while (await _messageArchivalQueue.Reader.WaitToReadAsync())
         {
-
             await foreach (var guildMessage in _messageArchivalQueue.Reader.ReadAllAsync())
             {
                await ArchiveMessageAsync(guildMessage.guild, guildMessage.message).ConfigureAwait(false);
