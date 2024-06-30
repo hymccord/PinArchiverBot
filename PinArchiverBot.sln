@@ -1,11 +1,15 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{60C17103-7746-4C08-9A8F-46A17D473396}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PinArchiverBot", "src\PinArchiverBot\PinArchiverBot.csproj", "{301D4FE6-B246-4F24-85A6-8937AA4693BF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PinArchiverBot", "src\PinArchiverBot\PinArchiverBot.csproj", "{301D4FE6-B246-4F24-85A6-8937AA4693BF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C9D7DD8-A310-4EB3-9255-292EE116F7A1}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

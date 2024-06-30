@@ -22,7 +22,7 @@ internal class Program
         if (string.IsNullOrWhiteSpace(discordToken))
         {
             Console.WriteLine("Error: No discord token found. Please provide a token via the DiscordBotSettings:Token environment variable.");
-            Environment.Exit(1);
+            //Environment.Exit(1);
         }
 
         // ⚙ Configuration
@@ -53,6 +53,10 @@ internal class Program
             config.UseCompiledLambda = true;
         });
 
+        builder.Services.AddSingleton<PinArchiverService>();
+        builder.Services.AddSingleton<IPinArchiverService>(provider => provider.GetRequiredService<PinArchiverService>());
+
+        // 🚀 Hosted Services
         builder.Services.AddHostedService<DatabaseMigrationService>();
         builder.Services.AddHostedService<InteractionHandlerService>();
         builder.Services.AddHostedService<BotStatusService>();
