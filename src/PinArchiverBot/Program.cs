@@ -26,7 +26,7 @@ internal class Program
         {
             if (!EF.IsDesignTime)
             {
-                Console.WriteLine("Error: No discord token found. Please provide a token via the DiscordBotSettings:Token environment variable.");
+                Console.WriteLine("Error: No Discord token found in DiscordBotSettings:Token from appsettings.json.");
                 Environment.Exit(1);
             }
         }
