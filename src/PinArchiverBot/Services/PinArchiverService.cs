@@ -44,6 +44,13 @@ public interface IPinArchiverService
     /// <param name="channelId">The ID of the channel to be whitelisted.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task WhitelistChannelAsync(ulong guildId, ulong channelId);
+
+    /// <summary>
+    /// Archives a channel by sending all pinned messages to the configured archive channel.
+    /// </summary>
+    /// <param name="channelId">The ID of the channel to be archived.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ArchiveChannelAsync(ulong channelId);
 }
 
 class PinArchiverService : IPinArchiverService
@@ -172,6 +179,21 @@ class PinArchiverService : IPinArchiverService
         await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    public async Task ArchiveChannelAsync(ulong channelId)
+    {
+        if (await _client.GetChannelAsync(channelId) is not ITextChannel channel)
+        {
+            return;
+        }
+
+        // get all pinned messages in a channel
+        var pinnedMessages = await channel.GetPinnedMessagesAsync();
+        foreach (var message in pinnedMessages.OfType<IUserMessage>())
+        {
+            await ArchiveMessageAsync(channel.Guild, message).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>
     /// Handles the event when a message is edited in a guild.
     /// If the message is pinned and not in a blacklisted channel, it is added to the message archival queue.
@@ -236,19 +258,20 @@ class PinArchiverService : IPinArchiverService
         {
             if (message.Embeds.Count != 0)
             {
-                _logger.LogInformation("I don't support embeds yet.");
+                await textChannel.SendMessageAsync(embed: message.Embeds.First().ToEmbedBuilder().Build());
             }
             else
             {
                 var embedBuilder = new EmbedBuilder()
                     .WithAuthor(message.Author)
-                    .WithDescription(message.Content)
-                    .WithFooter($"[Original message]({message.GetJumpUrl()})");
+                    .WithDescription(message.Content);
 
                 if (message.Attachments.Count != 0)
                 {
                     embedBuilder.AddField("Attachments", string.Join("\n", message.Attachments.Select(a => a.Url)));
                 }
+
+                embedBuilder.AddField("Original Message", $"[Link]({message.GetJumpUrl()})");
 
                 await textChannel.SendMessageAsync(embed: embedBuilder.Build());
             }

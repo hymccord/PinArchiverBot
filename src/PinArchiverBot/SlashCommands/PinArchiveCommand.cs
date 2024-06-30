@@ -68,6 +68,16 @@ public class PinArchiveCommand : InteractionModuleBase
         await FollowupAsync($"Included <#{archiveChannel.Id}> in archiving.");
     }
 
+    [SlashCommand("archive", "Archive the pinned messages in the specified channel.")]
+    public async Task ArchiveAsync([Summary("Channel", "The text channel to archive pins from.")][ChannelTypes(ChannelType.Text)] IGuildChannel archiveChannel)
+    {
+        _logger.LogInformation("Archiving pinned messages from {Channel}.", archiveChannel.Name);
+
+        await DeferAsync();
+        await _archiverService.ArchiveChannelAsync(archiveChannel.Id);
+        await FollowupAsync($"Archived pinned messages from <#{archiveChannel.Id}>.");
+    }
+
     [SlashCommand("list", "List the current archive settings.")]
     public async Task ListAsync()
     {
@@ -83,15 +93,15 @@ public class PinArchiveCommand : InteractionModuleBase
             .ToListAsync();
 
         var embedBuilder = new EmbedBuilder()
-            .WithTitle("Archive settings")
-            .AddField("Archive channel", archiveChannel is null ? "Not set" : $"<#{archiveChannel.ChannelId}>");
+            .WithTitle("Settings")
+            .AddField(":file_cabinet: ", archiveChannel is null ? "Not set" : $"<#{archiveChannel.ChannelId}>");
 
         if (blacklistChannels.Count != 0)
         {
             var sb = new StringBuilder();
             foreach (var channel in blacklistChannels)
             {
-                sb.AppendLine($"<#{channel.ChannelId}>");
+                sb.AppendLine($":x: <#{channel.ChannelId}>");
             }
             embedBuilder.AddField("Excluded channels", sb.ToString());
         }
