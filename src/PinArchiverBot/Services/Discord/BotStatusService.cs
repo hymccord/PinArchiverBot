@@ -11,7 +11,7 @@ using Discord.WebSocket;
 
 using Microsoft.Extensions.Logging;
 
-namespace PinArchiverBot;
+namespace PinArchiverBot.Services.Discord;
 internal class BotStatusService : DiscordClientService
 {
     public BotStatusService(DiscordSocketClient client, ILogger<BotStatusService> logger)

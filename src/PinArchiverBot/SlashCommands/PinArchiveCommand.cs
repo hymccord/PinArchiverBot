@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using PinArchiverBot.Persistence;
+using PinArchiverBot.Services;
 
 namespace PinArchiverBot.SlashCommands;
 
@@ -27,7 +28,7 @@ public class PinArchiveCommand : InteractionModuleBase
         _contextFactory = contextFactory;
     }
 
-    [SlashCommand("enable", "Enable archiving of pinned messages to specified channel.")]
+    [SlashCommand("enable", "Enable pinned messages to be archived to specified channel.")]
     public async Task EnableAsync([Summary("Channel", "The text channel to archive pins to.")][ChannelTypes(ChannelType.Text)] IGuildChannel archiveChannel)
     {
         _logger.LogInformation("Enabling archiving of pinned messages to {Channel}.", archiveChannel.Name);

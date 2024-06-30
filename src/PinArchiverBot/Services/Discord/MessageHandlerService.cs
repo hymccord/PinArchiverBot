@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Discord;
+﻿using Discord;
 using Discord.Addons.Hosting;
 using Discord.Addons.Hosting.Util;
 using Discord.WebSocket;
 
 using Microsoft.Extensions.Logging;
 
-namespace PinArchiverBot;
+using PinArchiverBot.Services;
+
+namespace PinArchiverBot.Services.Discord;
 internal class MessageHandlerService : DiscordClientService
 {
     private readonly PinArchiverService _archiverService;
@@ -28,33 +24,17 @@ internal class MessageHandlerService : DiscordClientService
         await Client.WaitForReadyAsync(stoppingToken).ConfigureAwait(false);
         Logger.LogInformation("MessageHandlerService is now running.");
 
-        Client.MessageReceived += HandleReceivedMessage;
         Client.MessageUpdated += HandleUpdatedMessage;
-    }
-
-    private Task HandleReceivedMessage(SocketMessage message)
-    {
-        Logger.LogInformation("Received message: {Message}", message);
-
-        return Task.CompletedTask;
     }
 
     private async Task HandleUpdatedMessage(Cacheable<IMessage?, ulong> messageBefore, SocketMessage messageAfter, ISocketMessageChannel channel)
     {
-        Logger.LogInformation("Updated message: {Message}", messageAfter.Content);
-        Logger.LogInformation("Before: {BeforeIsPinned}, After: {AfterIsPinned}", messageBefore.Value?.IsPinned, messageAfter.IsPinned);
+        Logger.LogDebug("Updated message: {Message}", messageAfter.Content);
 
-        if (channel is not SocketGuildChannel guildChannel)
+        if (channel is SocketGuildChannel guildChannel &&
+            messageAfter is IUserMessage userMessage)
         {
-            return;
+            await _archiverService.OnMessageEditedAsync(guildChannel.Guild, userMessage);
         }
-
-        if (messageAfter is not IUserMessage userMessage)
-        {
-
-            return;
-        }
-
-        await _archiverService.OnMessageEditedAsync(guildChannel.Guild, userMessage);
     }
 }

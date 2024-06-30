@@ -11,12 +11,38 @@ using Microsoft.Extensions.Logging;
 using PinArchiverBot.Persistence;
 using PinArchiverBot.Persistence.Models;
 
-namespace PinArchiverBot;
+namespace PinArchiverBot.Services;
 public interface IPinArchiverService
 {
+    /// <summary>
+    /// Enable archiving of pinned messages to a channel.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="channelId">The ID of the channel.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task EnableArchiveChannelAsync(ulong guildId, ulong channelId);
+
+    /// <summary>
+    /// Disables archiving of pinned messages for a specific guild.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task DisableArchiveChannelAsync(ulong guildId);
+
+    /// <summary>
+    /// Blacklists a channel for archiving pinned messages.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="channelId">The ID of the channel to be blacklisted.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task BlacklistChannelAsync(ulong guildId, ulong channelId);
+
+    /// <summary>
+    /// Whitelists a channel for archiving pinned messages.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="channelId">The ID of the channel to be whitelisted.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task WhitelistChannelAsync(ulong guildId, ulong channelId);
 }
 
@@ -43,6 +69,10 @@ class PinArchiverService : IPinArchiverService
         _client = client;
     }
 
+    /// <summary>
+    /// Initializes the PinArchiverService.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InitializeAsync()
     {
         using var context = _contextFactory.CreateDbContext();
@@ -51,6 +81,7 @@ class PinArchiverService : IPinArchiverService
             .Select(ac => new KeyValuePair<ulong, ulong>(ac.GuildId, ac.ChannelId))
             .ToListAsync();
         _guildArchiveChannelCache = new(archiveChannels);
+
         var blacklistChannels = await context.BlacklistChannels
             .Select(ac => new KeyValuePair<ulong, ulong>(ac.ChannelId, ac.ChannelId))
             .ToListAsync();
@@ -59,6 +90,7 @@ class PinArchiverService : IPinArchiverService
         _ = Task.Run(ProcessMessagesAsync);
     }
 
+    /// <inheritdoc/>
     public async Task EnableArchiveChannelAsync(ulong guildId, ulong channelId)
     {
         await DisableArchiveChannelAsync(guildId);
@@ -77,6 +109,7 @@ class PinArchiverService : IPinArchiverService
         await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
     public async Task DisableArchiveChannelAsync(ulong guildId)
     {
         if (!_guildArchiveChannelCache.TryRemove(guildId, out ulong channelId))
@@ -94,6 +127,8 @@ class PinArchiverService : IPinArchiverService
         }
     }
 
+
+    /// <inheritdoc/>
     public async Task BlacklistChannelAsync(ulong guildId, ulong channelId)
     {
         if (_blacklistedChannels.ContainsKey(channelId))
@@ -113,6 +148,7 @@ class PinArchiverService : IPinArchiverService
         await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
     public async Task WhitelistChannelAsync(ulong guildId, ulong channelId)
     {
         if (!_blacklistedChannels.ContainsKey(channelId))
@@ -127,12 +163,22 @@ class PinArchiverService : IPinArchiverService
         BlacklistChannel? channel = await context.BlacklistChannels
             .Where(bc => bc.ChannelId == channelId)
             .SingleOrDefaultAsync();
-        if (channel is not null) {
-            context.BlacklistChannels.Remove(channel);
-            await context.SaveChangesAsync().ConfigureAwait(false);
+        if (channel is null)
+        {
+            return;
         }
+
+        context.BlacklistChannels.Remove(channel);
+        await context.SaveChangesAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Handles the event when a message is edited in a guild.
+    /// If the message is pinned and not in a blacklisted channel, it is added to the message archival queue.
+    /// </summary>
+    /// <param name="guild">The guild where the message was edited.</param>
+    /// <param name="message">The edited message.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task OnMessageEditedAsync(IGuild guild, IUserMessage message)
     {
         if (!message.IsPinned)
@@ -148,22 +194,32 @@ class PinArchiverService : IPinArchiverService
         await _messageArchivalQueue.Writer.WriteAsync((guild, message)).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Processes the messages in the message archival queue and archives them.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessMessagesAsync()
     {
         while (await _messageArchivalQueue.Reader.WaitToReadAsync())
         {
             await foreach (var guildMessage in _messageArchivalQueue.Reader.ReadAllAsync())
             {
-               await ArchiveMessageAsync(guildMessage.guild, guildMessage.message).ConfigureAwait(false);
+                await ArchiveMessageAsync(guildMessage.guild, guildMessage.message).ConfigureAwait(false);
             }
 
             await Task.Delay(1000);
         }
     }
 
+    /// <summary>
+    /// Archives a message by sending it to the configured archive channel.
+    /// </summary>
+    /// <param name="guild">The guild where the message is being archived.</param>
+    /// <param name="message">The message to be archived.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ArchiveMessageAsync(IGuild guild, IUserMessage message)
     {
-
+        // If the guild hasn't set up a channel, we can't archive yet.
         if (!_guildArchiveChannelCache.TryGetValue(guild.Id, out ulong archiveChannelId))
         {
             return;
@@ -178,9 +234,26 @@ class PinArchiverService : IPinArchiverService
 
         try
         {
-            await textChannel.SendMessageAsync(message.Content);
+            if (message.Embeds.Count != 0)
+            {
+                _logger.LogInformation("I don't support embeds yet.");
+            }
+            else
+            {
+                var embedBuilder = new EmbedBuilder()
+                    .WithAuthor(message.Author)
+                    .WithDescription(message.Content)
+                    .WithFooter($"[Original message]({message.GetJumpUrl()})");
 
-        } catch (HttpException ex)
+                if (message.Attachments.Count != 0)
+                {
+                    embedBuilder.AddField("Attachments", string.Join("\n", message.Attachments.Select(a => a.Url)));
+                }
+
+                await textChannel.SendMessageAsync(embed: embedBuilder.Build());
+            }
+        }
+        catch (HttpException ex)
         {
             _logger.LogError(ex, "Failed to send message to archive channel.");
         }

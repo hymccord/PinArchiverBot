@@ -8,6 +8,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 using PinArchiverBot.Persistence;
+using PinArchiverBot.Services;
+using PinArchiverBot.Services.Discord;
+using PinArchiverBot.Services.Hosted;
 
 namespace PinArchiverBot;
 

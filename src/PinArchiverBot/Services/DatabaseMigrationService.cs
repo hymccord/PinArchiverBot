@@ -2,7 +2,9 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace PinArchiverBot.Persistence;
+using PinArchiverBot.Persistence;
+
+namespace PinArchiverBot.Services.Hosted;
 internal class DatabaseMigrationService : BackgroundService
 {
     private readonly ILogger<DatabaseMigrationService> _logger;

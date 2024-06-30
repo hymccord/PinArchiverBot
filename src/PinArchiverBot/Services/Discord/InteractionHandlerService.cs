@@ -8,7 +8,7 @@ using Discord.WebSocket;
 
 using Microsoft.Extensions.Logging;
 
-namespace PinArchiverBot;
+namespace PinArchiverBot.Services.Discord;
 internal class InteractionHandlerService : DiscordClientService
 {
     private readonly InteractionService _handler;
