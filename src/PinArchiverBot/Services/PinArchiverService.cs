@@ -271,7 +271,9 @@ class PinArchiverService : IPinArchiverService
                     embedBuilder.AddField("Attachments", string.Join("\n", message.Attachments.Select(a => a.Url)));
                 }
 
-                embedBuilder.AddField("Original Message", $"[Link]({message.GetJumpUrl()})");
+                embedBuilder
+                    .AddField("Original Message", $"[Link]({message.GetJumpUrl()})")
+                    .AddField("Author ID", message.Author.Id);
 
                 await textChannel.SendMessageAsync(embed: embedBuilder.Build());
             }
